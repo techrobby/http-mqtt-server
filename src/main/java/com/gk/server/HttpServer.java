@@ -25,13 +25,13 @@ import com.gk.server.http.exception.DefaultExceptionHandler;
 /**
  * Discards any incoming data.
  */
-public class ServerMain
+public class HttpServer
 {
 	private int port;
 
-	private static final Logger l = LoggerFactory.getLogger(ServerMain.class);
+	private static final Logger l = LoggerFactory.getLogger(HttpServer.class);
 
-	public ServerMain(int port)
+	public HttpServer(int port)
 	{
 		this.port = port;
 	}
@@ -94,6 +94,6 @@ public class ServerMain
 			port = 8080;
 		}
 
-		new ServerMain(port).run();
+		new HttpServer(port).run();
 	}
 }
