@@ -64,7 +64,7 @@ public class ServerMain
 			l.info("Created server on port {}", port);
 
 			// Bind and start to accept incoming connections.
-			ChannelFuture f = b.bind(port).sync(); // (7)
+			ChannelFuture f = b.bind(port).sync();
 
 			// Wait until the server socket is closed.
 			// In this example, this does not happen, but you can do that to gracefully
