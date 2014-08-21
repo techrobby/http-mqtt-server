@@ -1,8 +1,6 @@
 package com.gk.server.http;
 
-import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -14,18 +12,12 @@ import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.QueryStringDecoder;
-import io.netty.handler.codec.http.multipart.Attribute;
-import io.netty.handler.codec.http.multipart.DefaultHttpDataFactory;
-import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
-import io.netty.handler.codec.http.multipart.InterfaceHttpData;
-import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.IOException;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -42,8 +34,9 @@ import com.gk.server.http.message.Request;
 
 /**
  * 
- * @author Gautam This class is used to decode the request into FullHttpRequest object. This class will internally handle the form/json or any other form of request. If payload is
- *         json (content type : json), it will be parsed using Jackson's JSON decoder, for form handling it will be handled accordingly
+ * @author Gautam This class is used to decode the request into FullHttpRequest object. This class will internally
+ *         handle the form/json or any other form of request. If payload is json (content type : json), it will be
+ *         parsed using Jackson's JSON decoder, for form handling it will be handled accordingly
  */
 public class ServerHandler extends SimpleChannelInboundHandler<Request>
 {
@@ -61,68 +54,68 @@ public class ServerHandler extends SimpleChannelInboundHandler<Request>
 	protected void channelRead0(final ChannelHandlerContext ctx, final Request request) throws IOException, InstantiationException, IllegalAccessException
 	{
 		FullHttpRequest httpRequest = request.getHttpRequest();
-        String path = getPath(request);
-		l.debug( "Received request for {} {}", path, httpRequest.getUri());
+		String path = getPath(request);
+		l.debug("Received request for {} {}", path, httpRequest.getUri());
 		if (httpRequest.getMethod() != POST || !httpRequest.headers().contains("Content-type", "application/json", true))
-        {
+		{
 			sendBadRequest(ctx, request);
 			return;
-        }
+		}
 
-		l.info( "Received request for {}", path);
+		l.info("Received request for {}", path);
 		if (path.equals("/events"))
 		{
-                String jsonString = httpRequest.content().toString(CharsetUtil.UTF_8);
-                final JSONArray eventList;
-                try
-                {
-                        eventList = new JSONArray(jsonString);
-                }
-                catch (JSONException e)
-                {
-                        ctx.fireExceptionCaught( e );
-                        return;
-                }
-                Future<Boolean> future = executor.submit(new Callable<Boolean>()
-                {
-                        @Override
-                        public Boolean call() throws Exception
-                        {
-                                try
-                                {
-                                        return true;
-                                }
-                                catch (Exception e)
-                                {
-                                        l.info( "Error while inserting events!" );
-                                        return false;
-                                }
-                        }
-                });
-                future.addListener(new GenericFutureListener<Future<Boolean>>()
-                {
-                        @Override
-                        public void operationComplete(Future<Boolean> future) throws Exception
-                        {
-                                boolean insertSuccess = future.get();
-                                if (future.isSuccess() && insertSuccess)
-                                {
-                                        // Build the response object
-                                        FullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, OK);
-                                        FullEncodedResponse encodedResponse = new FullEncodedResponse(request, httpResponse);
-                                        ctx.writeAndFlush(encodedResponse);
-                                }
-                                else
-                                {
-                                        ctx.fireExceptionCaught(future.cause());
-                                }
-                        }
-                });
-                return;
+			String jsonString = httpRequest.content().toString(CharsetUtil.UTF_8);
+			final JSONArray eventList;
+			try
+			{
+				eventList = new JSONArray(jsonString);
+			}
+			catch (JSONException e)
+			{
+				ctx.fireExceptionCaught(e);
+				return;
+			}
+			Future<Boolean> future = executor.submit(new Callable<Boolean>()
+			{
+				@Override
+				public Boolean call() throws Exception
+				{
+					try
+					{
+						return true;
+					}
+					catch (Exception e)
+					{
+						l.info("Error while inserting events!");
+						return false;
+					}
+				}
+			});
+			future.addListener(new GenericFutureListener<Future<Boolean>>()
+			{
+				@Override
+				public void operationComplete(Future<Boolean> future) throws Exception
+				{
+					boolean insertSuccess = future.get();
+					if (future.isSuccess() && insertSuccess)
+					{
+						// Build the response object
+						FullHttpResponse httpResponse = new DefaultFullHttpResponse(HTTP_1_1, OK);
+						FullEncodedResponse encodedResponse = new FullEncodedResponse(request, httpResponse);
+						ctx.writeAndFlush(encodedResponse);
+					}
+					else
+					{
+						ctx.fireExceptionCaught(future.cause());
+					}
+				}
+			});
+			return;
 		}
 		else if (path.equals("/events/search"))
 		{
-			final JSONObject query = new JSONObject( httpRequest.content().toString( CharsetUtil.UTF_8 ) );
+			final JSONObject query = new JSONObject(httpRequest.content().toString(CharsetUtil.UTF_8));
 			Future<String> future = executor.submit(new Callable<String>()
 			{
 				@Override

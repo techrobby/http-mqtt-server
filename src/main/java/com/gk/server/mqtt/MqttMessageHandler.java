@@ -1,9 +1,13 @@
 package com.gk.server.mqtt;
 
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.gk.server.MqttServer;
+import com.gk.server.SessionManager;
+import com.gk.server.mqtt.msg.ConnAckMessage;
+import com.gk.server.mqtt.msg.ConnAckMessage.ConnectionStatus;
 import com.gk.server.mqtt.msg.ConnectMessage;
 import com.gk.server.mqtt.msg.DisconnectMessage;
 import com.gk.server.mqtt.msg.Message;
@@ -14,6 +18,8 @@ import com.gk.server.mqtt.msg.PublishMessage;
 import com.gk.server.mqtt.msg.SubscribeMessage;
 import com.gk.server.mqtt.msg.UnsubscribeMessage;
 
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
@@ -21,6 +27,12 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<Message>
 {
 
 	private static final Logger logger = LoggerFactory.getLogger(MqttMessageHandler.class);
+	
+	private SessionManager sm = SessionManager.getInstance();
+	
+	private ConnAckMessage.ConnectionStatus connectionStatus = ConnectionStatus.NOT_AUTHORIZED;
+	
+	String clientId;
 	
 	@Override
 	protected void channelRead0(ChannelHandlerContext ctx, Message msg) throws Exception
@@ -100,9 +112,44 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<Message>
 		
 	}
 
-	private void handleMessage(ChannelHandlerContext ctx, ConnectMessage msg)
+	private void handleMessage(final ChannelHandlerContext ctx, ConnectMessage msg)
 	{
-		logger.info("Connect Message received.");	
+		ConnAckMessage.ConnectionStatus status = ConnAckMessage.ConnectionStatus.ACCEPTED;
+		clientId = msg.getClientId();
+		if (StringUtils.isEmpty(clientId))
+		{
+			logger.info("[" + msg.getClientId() + "] : AUTH_FAILURE. Null clientId : " + msg.getClientId());
+			status = ConnAckMessage.ConnectionStatus.BAD_USERNAME_OR_PASSWORD;
+		}
+		else
+		{
+
+		}
+		ConnAckMessage ackMessage = new ConnAckMessage(status);
+		ChannelFuture future = ctx.writeAndFlush(ackMessage);
+		future.addListener(new ChannelFutureListener()
+		{
+			@Override
+			public void operationComplete(ChannelFuture channelFuture) throws Exception
+			{
+				if (!channelFuture.isSuccess())
+				{
+					Throwable cause = channelFuture.cause();
+					if (cause != null)
+					{
+						cause.printStackTrace();
+						logger.error("Channel write failed while writing connack", cause);
+					}
+					ctx.close();
+				}
+				else
+				{
+					// register context in sessions
+					sm.addSession(clientId, ctx);
+					connectionStatus = ConnectionStatus.ACCEPTED;
+				}
+			}
+		});	
 	}
 
 }
