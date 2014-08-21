@@ -1,0 +1,7 @@
+{
+	"mqtt.persistence" : "mongo", // mongo : for MongoDB, sqlite : for SQLite DB, memory : Memory Persistence
+	"http.port" : 8080,
+	"http.host" : "localhost",
+	"mongo.port" : 12017,
+	"mongo.host" : "localhost", 
+}
